@@ -157,7 +157,9 @@ def run_training_loop(params):
           # HINT2: use np.random.permutation to sample random indices
           # HINT3: return corresponding data points from each array (i.e., not different indices from each array)
           # for imitation learning, we only need observations and actions.  
-          ob_batch, ac_batch = TODO
+          batch_size = params['train_batch_size']
+          select_indices = np.random.permutation(replay_buffer.obs.shape[0])[:batch_size]
+          ob_batch, ac_batch = replay_buffer.obs[select_indices], replay_buffer.acs[select_indices]
 
           # use the sampled data to train an agent
           train_log = actor.update(ob_batch, ac_batch)
@@ -217,7 +219,8 @@ def main():
     parser.add_argument('--ep_len', type=int)
 
     parser.add_argument('--num_agent_train_steps_per_iter', type=int, default=1000)  # number of gradient steps for training policy (per iter in n_iter)
-    parser.add_argument('--n_iter', '-n', type=int, default=1)
+    parser.add_argument('--
+                        ', '-n', type=int, default=1)
 
     parser.add_argument('--batch_size', type=int, default=1000)  # training data collected (in the env) during each iteration
     parser.add_argument('--eval_batch_size', type=int,
