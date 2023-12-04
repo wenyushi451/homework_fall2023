@@ -32,21 +32,23 @@ class AWACAgent(DQNAgent):
     ):
         with torch.no_grad():
             # TODO(student): compute the actor distribution, then use it to compute E[Q(s, a)]
-            next_qa_values = ...
+            next_qa_values = self.target_critic(next_observations)
 
             # Use the actor to compute a critic backup
+            next_action = next_qa_values.argmax(-1)
 
-            next_qs = ...
+            next_qs = torch.gather(next_qa_values, -1, next_action.unsqueeze(1)).squeeze(1)
 
             # TODO(student): Compute the TD target
-            target_values = ...
+            target_values = rewards + self.discount * next_qs * (1 - dones.type(torch.int))
 
         
+        qa_values = self.critic(observations)
         # TODO(student): Compute Q(s, a) and loss similar to DQN
-        q_values = ...
+        q_values = torch.gather(qa_values, -1, actions.unsqueeze(1)).squeeze(1)
         assert q_values.shape == target_values.shape
 
-        loss = ...
+        loss = self.critic_loss(q_values, target_values)
 
         return (
             loss,
@@ -68,11 +70,11 @@ class AWACAgent(DQNAgent):
         action_dist: Optional[torch.distributions.Categorical] = None,
     ):
         # TODO(student): compute the advantage of the actions compared to E[Q(s, a)]
-        qa_values = ...
-        q_values = ...
-        values = ...
+        qa_values = self.target_critic(observations)
+        q_values = torch.gather(qa_values, actions, -1)
+        values = action_dist.probs(actions) * qa_values
 
-        advantages = ...
+        advantages = q_values - values
         return advantages
 
     def update_actor(
@@ -81,7 +83,8 @@ class AWACAgent(DQNAgent):
         actions: torch.Tensor,
     ):
         # TODO(student): update the actor using AWAC
-        loss = ...
+        log_actions = torch.gather(self.actor(observations).rsample(), actions, -1)
+        loss =  -log_actions * self.compute_advantage(observations=observations, actions=actions, action_dist=self.actor)
 
         self.actor_optimizer.zero_grad()
         loss.backward()
