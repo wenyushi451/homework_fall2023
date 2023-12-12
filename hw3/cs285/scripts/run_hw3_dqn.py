@@ -106,7 +106,10 @@ def run_training_loop(config: dict, logger: Logger, args: argparse.Namespace):
         if isinstance(replay_buffer, MemoryEfficientReplayBuffer):
             # We're using the memory-efficient replay buffer,
             # so we only insert next_observation (not observation)
-            replay_buffer.insert(action, reward, next_observation, done and not truncated)
+            if stacked_frames:
+                replay_buffer.insert(action, reward, next_observation[-1], done and not truncated)
+            else:
+                replay_buffer.insert(action, reward, next_observation, done and not truncated)
         else:
             # We're using the regular replay buffer
             replay_buffer.insert(observation, action, reward, next_observation, done and not truncated)

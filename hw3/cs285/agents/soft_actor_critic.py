@@ -188,7 +188,7 @@ class SoftActorCritic(nn.Module):
         with torch.no_grad():
             # TODO(student)
             # Sample from the actor
-            next_action_distribution: torch.distributions.Distribution = self.actor.forward(obs)
+            next_action_distribution: torch.distributions.Distribution = self.actor.forward(next_obs)
             next_action = next_action_distribution.sample()
 
             # Compute the next Q-values for the sampled actions
@@ -287,7 +287,7 @@ class SoftActorCritic(nn.Module):
 
         # TODO(student): Sample actions
         # Note: Think about whether to use .rsample() or .sample() here...
-        action = action_distribution.rsample()
+        action = action_distribution.rsample(torch.Size([self.num_actor_samples]))
 
         # TODO(student): Compute Q-values for the sampled state-action pair
         q_values = self.critic(obs=obs, action=action)
@@ -357,10 +357,11 @@ class SoftActorCritic(nn.Module):
         #  - self.target_update_period (None when using soft updates)
         #  - self.soft_target_update_rate (None when using hard updates)
         if self.target_update_period and step % self.target_update_period == 0:
-            self.update_target_critic()
+            if step % self.target_update_period == 0:
+                self.update_target_critic()
         else:
             # self.soft_update_target_critic(self.soft_target_update_rate)
-            self.soft_update_target_critic(0.005)
+            self.soft_update_target_critic(self.soft_target_update_rate)
 
         # Average the critic info over all of the steps
         critic_info = {
