@@ -42,6 +42,9 @@ class CQLAgent(DQNAgent):
 
         # TODO(student): modify the loss to implement CQL
         # Hint: `variables` includes qa_values and q_values from your CQL implementation
-        loss = loss + self.cql_alpha * torch.mean(torch.logsumexp(variables["qa_values"]) - variables["q_values"], 0)
+        # preventing overestimation of the policy value
+        qa_values = variables["qa_values"]
+        q_values = variables["q_values"]
+        loss = loss + self.cql_alpha * torch.mean(torch.logsumexp(qa_values / self.cql_temperature, dim=-1) - q_values, 0)
 
         return loss, metrics, variables

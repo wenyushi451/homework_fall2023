@@ -1,6 +1,7 @@
 import time
 import argparse
 import pickle
+from pathlib import Path
 
 from cs285.agents import agents as agent_types
 from cs285.envs import Pointmass
@@ -177,6 +178,7 @@ def run_training_loop(config: dict, logger: Logger, args: argparse.Namespace):
         print("Saved dataset to", dataset_file)
     
     # Render final heatmap
+    Path("exploration_visualization").mkdir(parents=True, exist_ok=True)
     fig = visualize(env_pointmass, agent, replay_buffer.observations[:config["total_steps"]])
     fig.suptitle("State coverage")
     filename = os.path.join("exploration_visualization", f"{config['log_name']}.png")

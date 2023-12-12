@@ -50,6 +50,7 @@ class DQNAgent(nn.Module):
         # raise NotImplementedError
         if np.random.binomial(1, epsilon):
             action = np.random.randint(0, self.num_actions)
+            return action
         else:
             with torch.no_grad():
                 action = self.critic(observation).argmax(-1)
@@ -96,14 +97,14 @@ class DQNAgent(nn.Module):
         q_values = torch.gather(qa_values, -1, action.unsqueeze(1)).squeeze(1) # Compute from the data actions; see torch.gather
         loss = self.critic_loss(q_values, target_values)
 
-        self.critic_optimizer.zero_grad()
-        loss.backward()
-        grad_norm = torch.nn.utils.clip_grad.clip_grad_norm_(
-            self.critic.parameters(), self.clip_grad_norm or float("inf")
-        )
-        self.critic_optimizer.step()
+        # self.critic_optimizer.zero_grad()
+        # loss.backward()
+        # grad_norm = torch.nn.utils.clip_grad.clip_grad_norm_(
+        #     self.critic.parameters(), self.clip_grad_norm or float("inf")
+        # )
+        # self.critic_optimizer.step()
 
-        self.lr_scheduler.step()
+        # self.lr_scheduler.step()
         
         return (
             loss,
