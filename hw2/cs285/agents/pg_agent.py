@@ -71,6 +71,7 @@ class PGAgent(nn.Module):
         actions = np.concatenate(actions)
         rewards = np.concatenate(rewards)
         terminals = np.concatenate(terminals)
+        # q_values = np.concatenate(q_values, axis=0)
 
         # step 2: calculate advantages from Q values
         advantages: np.ndarray = self._estimate_advantage(
@@ -84,7 +85,10 @@ class PGAgent(nn.Module):
         # step 4: if needed, use all datapoints (s_t, a_t, q_t) to update the PG critic/baseline
         if self.critic is not None:
             # TODO: perform `self.baseline_gradient_steps` updates to the critic/baseline network
-            critic_info: dict = self.critic.update(obs, advantages)
+            for _ in range(self.baseline_gradient_steps):
+                baseline_loss: dict = self.critic.update(obs, q_values)
+                
+            critic_info = baseline_loss
 
             info.update(critic_info)
 
@@ -123,13 +127,16 @@ class PGAgent(nn.Module):
             advantages = q_values.copy()
         else:
             # TODO: run the critic and use it as a baseline
-            values = self.critic.forward(obs)
+            values = self.critic.forward(ptu.from_numpy(obs))
+            values = ptu.to_numpy(values)[:, 0]
+            # import pdb; pdb.set_trace()
             assert values.shape == q_values.shape
 
             if self.gae_lambda is None:
                 # TODO: if using a baseline, but not GAE, what are the advantages?
                 advantages = q_values - values
             else:
+                # import pdb; pdb.set_trace()
                 # TODO: implement GAE
                 batch_size = obs.shape[0]
 
@@ -141,10 +148,16 @@ class PGAgent(nn.Module):
                     # TODO: recursively compute advantage estimates starting from timestep T.
                     # HINT: use terminals to handle edge cases. terminals[i] is 1 if the state is the last in its
                     # trajectory, and 0 otherwise.
-                    if terminals[i] == 1:
-                        advantages[i] = rewards[i] - values[i+1]
+                    # if terminals[i] == 1:
+                    #     advantages[i] = rewards[i] - values[i]
+                    #     break
+                    # else:
+                    #     advantages[i] = self.gamma * values[i+1] + rewards[i] - values[i]
+                    if terminals[i] == 0:
+                        d = rewards[i] + self.gamma * values[i + 1] - values[i]
+                        advantages[i] = d + self.gamma * self.gae_lambda * advantages[i + 1]
                     else:
-                        advantages[i] = self.gamma * values[i] + rewards[i] - values[i+1]
+                        advantages[i] = rewards[i] - values[i]
 
                 # remove dummy advantage
                 advantages = advantages[:-1]
