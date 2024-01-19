@@ -1,4 +1,3 @@
-# raise NotImplementedError("Copy in your SAC implementation from HW3 to proceed. A reference implementation will be released after the end of the HW3 late deadline.")
 from typing import Callable, Optional, Sequence, Tuple
 import copy
 
@@ -189,7 +188,7 @@ class SoftActorCritic(nn.Module):
         with torch.no_grad():
             # TODO(student)
             # Sample from the actor
-            next_action_distribution: torch.distributions.Distribution = self.actor.forward(obs)
+            next_action_distribution: torch.distributions.Distribution = self.actor.forward(next_obs)
             next_action = next_action_distribution.sample()
 
             # Compute the next Q-values for the sampled actions
@@ -262,7 +261,7 @@ class SoftActorCritic(nn.Module):
             ), action.shape
 
             # TODO(student): Compute Q-values for the current state-action pair
-            q_values = self.critic(obs=obs, action=action)
+            q_values = self.critic(obs=obs.unsqueeze(0).repeat(self.num_actor_samples, 1, 1), action=action)
             assert q_values.shape == (
                 self.num_critic_networks,
                 self.num_actor_samples,
@@ -288,13 +287,13 @@ class SoftActorCritic(nn.Module):
 
         # TODO(student): Sample actions
         # Note: Think about whether to use .rsample() or .sample() here...
-        action = action_distribution.rsample()
+        action = action_distribution.rsample(torch.Size([self.num_actor_samples]))
 
         # TODO(student): Compute Q-values for the sampled state-action pair
         q_values = self.critic(obs=obs, action=action)
 
         # TODO(student): Compute the actor loss
-        loss = torch.mean(torch.neg(torch.log(q_values)))
+        loss = torch.mean(torch.neg(q_values))
 
         return loss, torch.mean(self.entropy(action_distribution))
 
@@ -360,8 +359,7 @@ class SoftActorCritic(nn.Module):
         if self.target_update_period and step % self.target_update_period == 0:
             self.update_target_critic()
         else:
-            # self.soft_update_target_critic(self.soft_target_update_rate)
-            self.soft_update_target_critic(0.005)
+            self.soft_update_target_critic(self.soft_target_update_rate)
 
         # Average the critic info over all of the steps
         critic_info = {

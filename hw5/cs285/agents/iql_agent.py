@@ -38,7 +38,7 @@ class IQLAgent(AWACAgent):
         action_dist: Optional[torch.distributions.Categorical] = None,
     ):
         # TODO(student): Compute advantage with IQL
-        qa_values = self.target_critic(observations)
+        qa_values = self.critic(observations)
         q_values = torch.gather(qa_values, 1, actions.unsqueeze(1))
         vs = self.value_critic(observations)
         adv = q_values - vs
@@ -59,7 +59,8 @@ class IQLAgent(AWACAgent):
         qa_value = self.critic(observations)
         q_values = torch.gather(qa_value, 1, torch.unsqueeze(actions.long(), 1)).squeeze()
 
-        target_values = rewards + self.discount * (1 - dones.int()) * self.target_value_critic(next_observations)
+        with torch.no_grad():
+            target_values = rewards + self.discount * (1 - dones.int()) * self.target_value_critic(next_observations)
         loss = self.critic_loss(q_values, target_values)
 
         self.critic_optimizer.zero_grad()
@@ -100,8 +101,9 @@ class IQLAgent(AWACAgent):
         Update the value network V(s) using targets Q(s, a)
         """
         # TODO(student): Compute target values for V(s)
-        qa_value = self.target_critic(observations)
-        target_values = torch.gather(qa_value, 1, actions.unsqueeze(1))
+        with torch.no_grad():
+            qa_value = self.target_critic(observations)
+            target_values = torch.gather(qa_value, 1, actions.unsqueeze(1))
 
         # TODO(student): Update V(s) using the loss from the IQL paper
         vs = self.value_critic(observations)

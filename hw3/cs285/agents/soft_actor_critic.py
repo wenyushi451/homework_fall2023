@@ -261,7 +261,7 @@ class SoftActorCritic(nn.Module):
             ), action.shape
 
             # TODO(student): Compute Q-values for the current state-action pair
-            q_values = self.critic(obs=obs, action=action)
+            q_values = self.critic(obs=obs.unsqueeze(0).repeat(self.num_actor_samples, 1, 1), action=action)
             assert q_values.shape == (
                 self.num_critic_networks,
                 self.num_actor_samples,
@@ -293,7 +293,7 @@ class SoftActorCritic(nn.Module):
         q_values = self.critic(obs=obs, action=action)
 
         # TODO(student): Compute the actor loss
-        loss = torch.mean(torch.neg(torch.log(q_values)))
+        loss = torch.mean(torch.neg(q_values))
 
         return loss, torch.mean(self.entropy(action_distribution))
 
@@ -357,10 +357,8 @@ class SoftActorCritic(nn.Module):
         #  - self.target_update_period (None when using soft updates)
         #  - self.soft_target_update_rate (None when using hard updates)
         if self.target_update_period and step % self.target_update_period == 0:
-            if step % self.target_update_period == 0:
-                self.update_target_critic()
+            self.update_target_critic()
         else:
-            # self.soft_update_target_critic(self.soft_target_update_rate)
             self.soft_update_target_critic(self.soft_target_update_rate)
 
         # Average the critic info over all of the steps
